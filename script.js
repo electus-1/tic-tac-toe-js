@@ -34,7 +34,10 @@ const game = function (gameMode, player = null) {
     tile.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
-      if (tile.classList.contains("marked")) {
+      if (
+        tile.classList.contains("marked") ||
+        (gameMode === "vsCPU" && turn.getMark() !== player)
+      ) {
         return;
       }
       // get index of tile
@@ -50,6 +53,8 @@ const game = function (gameMode, player = null) {
     })
   );
 };
+
+function gameLoop() {}
 
 function chooseGameMode() {
   return new Promise((resolve, reject) => {
