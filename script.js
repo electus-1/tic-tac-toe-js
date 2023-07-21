@@ -63,7 +63,7 @@ const game = function (gameMode, player = null) {
   if (gameMode === "vsCPU")
     if (turn.getMark() !== player) {
       //   if first turn is computer's make a random move
-      putMarkWithIndex(Math.random() * 9, gameBoard, turn);
+      putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
       //   change turn
       turn = turn === playerX ? playerY : playerX;
     }
@@ -180,7 +180,6 @@ function computeAllPossibleGames(gameBoard, initialMark, currentMark) {
     // for each available tile put the mark
     if (tile === "*") {
       let child = cloneBoard(gameBoard);
-      console.log(child);
       child.setTile(currentMark);
       parent.children += child;
       if (isWinner(initialMark)) {
