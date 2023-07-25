@@ -1,3 +1,5 @@
+let isAPIavailable = true;
+
 const winningPositions = [
   [0, 1, 2],
   [3, 4, 5],
@@ -60,7 +62,7 @@ function game(gameMode, player = null) {
   if (gameMode === "vsCPU")
     if (turn.getMark() !== player) {
       //   if first turn is computer's make a random move
-      putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
+      putMarkWithIndex(Math.floor(Math.random() * 9), gameBoard, turn);
       //   change turn
       turn = turn === playerX ? playerY : playerX;
       hasPlayedBefore = true;
@@ -74,10 +76,12 @@ function game(gameMode, player = null) {
       e.preventDefault();
       if (
         tile.classList.contains("marked") ||
-        (gameMode === "vsCPU" && turn.getMark() !== player)
+        (gameMode === "vsCPU" && turn.getMark() !== player) ||
+        tile.classList.contains("disabled")
       ) {
         return;
       }
+      disableClick();
       putMark(tile, turn, gameBoard);
       // if it's 2P
       if (gameMode === "2P") {
@@ -90,23 +94,36 @@ function game(gameMode, player = null) {
         if (actionOnGameEnd(turn, gameBoard)) return;
         turn = turn === playerX ? playerY : playerX;
         if (!hasPlayedBefore) {
-          putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
+          putMarkWithIndex(Math.floor(Math.random() * 9), gameBoard, turn);
           hasPlayedBefore = true;
         } else {
           playTurn(turn, gameBoard);
         }
         turn = turn === playerX ? playerY : playerX;
       }
+      enableClick();
     })
   );
 }
 
 function putMark(tile, turn, gameBoard) {
   // get index of tile
-  const index = Number(tile.classList.toString().split("-")[1]) - 1;
+  const index =
+    Number(tile.classList.toString().split(" ")[1].split("-")[1]) - 1;
   putMarkWithIndex(index, gameBoard, turn);
 }
 
+function disableClick() {
+  document
+    .querySelectorAll(".tile")
+    .forEach((tile) => tile.classList.add("disabled"));
+}
+
+function enableClick() {
+  document
+    .querySelectorAll(".tile")
+    .forEach((tile) => tile.classList.remove("disabled"));
+}
 function putMarkWithIndex(index, gameBoard, turn) {
   const tileSelector = `.tile-${index + 1}`;
   const tile = document.querySelector(tileSelector);
@@ -156,20 +173,26 @@ function displayGameEnd(message) {
 
 async function playTurn(turn, gameBoard) {
   // [ ] TODO
-  const apiURL = "http://localhost:5235/move";
-  await fetch(apiURL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(createRequestObject(turn, gameBoard)),
-  })
-    .then((response) => response.json())
-    .then((data) => putMarkWithIndex(data.index, gameBoard, turn))
-    .catch((error) => {
-      console.log(error);
-      putMarkWithIndex(chooseRandomIndex(gameBoard), gameBoard, turn);
-    });
+  if (isAPIavailable) {
+    const apiURL = "http://localhost:5235/move";
+    await fetch(apiURL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(createRequestObject(turn, gameBoard)),
+    })
+      .then((response) => response.json())
+      .then((data) => putMarkWithIndex(data.index, gameBoard, turn))
+      .catch((error) => {
+        console.log(error);
+        isAPIavailable = false;
+        putMarkWithIndex(chooseRandomIndex(gameBoard), gameBoard, turn);
+      });
+  } else {
+    putMarkWithIndex(chooseRandomIndex(gameBoard), gameBoard, turn);
+  }
+
   actionOnGameEnd(turn, gameBoard);
 }
 
@@ -211,7 +234,7 @@ function chooseRandomIndex(gameBoard) {
       emptyTileIndexes.push(i);
     }
   }
-  return emptyTileIndexes[Math.round(Math.random() * emptyTileIndexes.length)];
+  return emptyTileIndexes[Math.floor(Math.random() * emptyTileIndexes.length)];
 }
 
 function chooseGameMode() {
