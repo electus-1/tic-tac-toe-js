@@ -146,14 +146,12 @@ function actionOnGameEnd(turn, gameBoard) {
   return false;
 }
 
-function declareWinner(mark) {
-  // [ ] TODO
-  displayGameEnd(`PLAYER ${mark} WINS!`);
+async function declareWinner(mark) {
+  delay(500).then(() => displayGameEnd(`PLAYER ${mark} WINS!`));
 }
 
-function declareTie() {
-  // [ ] TODO
-  displayGameEnd(`IT'S A TIE!`);
+async function declareTie() {
+  delay(500).then(() => displayGameEnd(`IT'S A TIE!`));
 }
 
 function displayGameEnd(message) {
@@ -172,7 +170,6 @@ function displayGameEnd(message) {
 }
 
 async function playTurn(turn, gameBoard) {
-  // [ ] TODO
   if (isAPIavailable) {
     const apiURL = "http://localhost:5235/move";
     await fetch(apiURL, {
@@ -289,6 +286,10 @@ async function onLoad() {
     modal.style.display = "none";
     game(gameMode, player);
   }
+}
+
+function delay(time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
 }
 
 onLoad();
