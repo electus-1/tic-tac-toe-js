@@ -23,15 +23,11 @@ function initGameBoard() {
   for (let i = 0; i < 9; i++) {
     board[i] = "*";
   }
-  // score will be calculated by winning * 2 + draw * 1 - losing * 3
-  let score = 0;
-  let parent = null;
-  let children = [];
 
   const setTile = (mark, index) => {
     board[index] = mark;
   };
-  return { board, setTile, parent, children, score };
+  return { board, setTile };
 }
 
 // [ ] TODO if its computers turn make move if not wait for player input
@@ -43,6 +39,7 @@ const game = function (gameMode, player = null) {
   const playerX = initPlayer("X");
   const playerY = initPlayer("O");
   let turn = playerX;
+  let hasPlayedBefore = false;
 
   // if it's 2P
   //   it will work based on user click
@@ -66,6 +63,7 @@ const game = function (gameMode, player = null) {
       putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
       //   change turn
       turn = turn === playerX ? playerY : playerX;
+      hasPlayedBefore = true;
     }
 
   //handle click on tile
@@ -89,12 +87,15 @@ const game = function (gameMode, player = null) {
         turn = turn === playerX ? playerY : playerX;
       }
       if (gameMode === "vsCPU") {
-        if (turn.getMark() === player) {
-          turn = turn === playerX ? playerY : playerX;
-          actionOnGameEnd(turn, gameBoard);
-          return;
+        actionOnGameEnd(turn, gameBoard);
+        turn = turn === playerX ? playerY : playerX;
+        if (!hasPlayedBefore) {
+          putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
+          hasPlayedBefore = true;
+        } else {
+          playTurn(turn, gameBoard);
         }
-        playTurn(gameMode, turn, player, gameBoard);
+        actionOnGameEnd(turn, gameBoard);
         turn = turn === playerX ? playerY : playerX;
       }
     })
@@ -136,73 +137,22 @@ function declareTie() {
   console.log("It's a tie!");
 }
 
-async function playTurn(gameMode, turn, player, gameBoard) {
+async function playTurn(turn, gameBoard) {
   // [ ] TODO
-  const index = await decideComputerMove(gameBoard, turn.getMark());
-  putMarkWithIndex(index, gameBoard, turn);
-  actionOnGameEnd(turn, gameBoard);
-}
-
-function addUpScores(gameBoard, score) {
-  let board = Object.assign(gameBoard);
-  while (board.parent != null) {
-    board = board.parent;
-    board.score += score;
-  }
-}
-
-async function decideComputerMove(gameBoard, computerMark) {
-  return new Promise((resolve, reject) => {
-    computeAllPossibleGames(gameBoard, computerMark, computerMark);
-    if (gameBoard.children.length < 1) {
-      reject(null);
-    }
-    let bestBoard = gameBoard.children[0];
-    let score = gameBoard.children[0].score;
-    gameBoard.children.forEach((board) => {
-      if (board.score > score) {
-        score = board.score;
-        bestBoard = board;
-      }
-    });
-    gameBoard.board.forEach(tile, (index) => {
-      if (tile !== bestBoard.board[index]) {
-        resolve(index);
-      }
-    });
-    reject(null);
+  const apiURL = "http://localhost:5235/move";
+  const response = await fetch(apiURL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(createRequestObject(turn, gameBoard)),
   });
+  console.log(response);
 }
 
-function computeAllPossibleGames(gameBoard, initialMark, currentMark) {
-  let parent = gameBoard;
-  gameBoard.board.forEach((tile, index) => {
-    // for each available tile put the mark
-    if (tile === "*") {
-      let child = cloneBoard(gameBoard);
-      child.setTile(currentMark);
-      parent.children += child;
-      if (isWinner(initialMark)) {
-        child.score += 2;
-        addUpScores(child, child.score);
-        return;
-      } else if (isWinner(initialMark === "X" ? "O" : "X")) {
-        child.score -= 3;
-        addUpScores(child, child.score);
-        return;
-      } else if (isBoardFull(gameBoard)) {
-        child.score += 1;
-        addUpScores(child, child.score);
-        return;
-      } else {
-        evaluateBestMove(child, initialMark, currentMark === "X" ? "O" : "X");
-      }
-    }
-  });
-
-  // see the winning and losing moves and draws
-  // evaluate score
-  // a score of a parent will be evaluated by summing the score of children
+function createRequestObject(turn, gameBoard) {
+  const board = gameBoard.board;
+  return { table: board.toString().split(",").join(""), mark: turn.getMark() };
 }
 
 function isBoardFull(gameBoard) {
@@ -263,13 +213,6 @@ function choosePlayer() {
       );
   });
 }
-
-function cloneBoard(board) {
-  let newBoard = Object.assign(board);
-  newBoard.parent = board;
-  return newBoard;
-}
-
 // make player choose x or o and start the game on screen load
 // make player choose 1p vs cmp or 2p on start before letting them choose, if 1p let them choose x or o if not they will assign it themselves
 
