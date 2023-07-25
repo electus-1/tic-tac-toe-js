@@ -55,13 +55,14 @@ body {
 
 button {
   border-radius: 12px;
+  padding: 12px;
   list-style: none;
   border-style: none;
-  width: 50%;
-  height: 20%;
   background-color: #ff8551;
   color: white;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 20px;
 }
 
@@ -76,4 +77,8 @@ button:active {
   transform: translateY(4px);
   filter: brightness(85%);
   transition: 0.07s;
+}
+
+.result-announcement {
+  font-size: 32px;
 }

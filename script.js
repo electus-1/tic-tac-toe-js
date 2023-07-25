@@ -9,14 +9,14 @@ const winningPositions = [
   [2, 4, 6],
 ];
 
-const initPlayer = function (mark) {
+function initPlayer(mark) {
   let _mark = mark;
 
   const getMark = () => {
     return _mark;
   };
   return { getMark };
-};
+}
 
 function initGameBoard() {
   let board = [];
@@ -31,7 +31,7 @@ function initGameBoard() {
 }
 
 // [ ] TODO if its computers turn make move if not wait for player input
-const game = function (gameMode, player = null) {
+function game(gameMode, player = null) {
   // initialize the game board
   const gameBoard = initGameBoard();
 
@@ -82,12 +82,12 @@ const game = function (gameMode, player = null) {
       // if it's 2P
       if (gameMode === "2P") {
         // check if the game is over
-        actionOnGameEnd(turn, gameBoard);
+        if (actionOnGameEnd(turn, gameBoard)) return;
         // change player
         turn = turn === playerX ? playerY : playerX;
       }
       if (gameMode === "vsCPU") {
-        actionOnGameEnd(turn, gameBoard);
+        if (actionOnGameEnd(turn, gameBoard)) return;
         turn = turn === playerX ? playerY : playerX;
         if (!hasPlayedBefore) {
           putMarkWithIndex(Math.round(Math.random() * 9), gameBoard, turn);
@@ -95,12 +95,11 @@ const game = function (gameMode, player = null) {
         } else {
           playTurn(turn, gameBoard);
         }
-        actionOnGameEnd(turn, gameBoard);
         turn = turn === playerX ? playerY : playerX;
       }
     })
   );
-};
+}
 
 function putMark(tile, turn, gameBoard) {
   // get index of tile
@@ -122,32 +121,56 @@ function putMarkWithIndex(index, gameBoard, turn) {
 function actionOnGameEnd(turn, gameBoard) {
   if (isWinner(turn.getMark(), gameBoard)) {
     declareWinner(turn.getMark());
+    return true;
   } else if (isBoardFull(gameBoard)) {
     declareTie();
+    return true;
   }
+  return false;
 }
 
 function declareWinner(mark) {
   // [ ] TODO
-  console.log(`Player ${mark} wins`);
+  displayGameEnd(`PLAYER ${mark} WINS!`);
 }
 
 function declareTie() {
   // [ ] TODO
-  console.log("It's a tie!");
+  displayGameEnd(`IT'S A TIE!`);
+}
+
+function displayGameEnd(message) {
+  const modal = document.querySelector(".modal");
+  modal.style.display = "flex";
+  const gameEndScreen = document.querySelector(".game-end");
+  gameEndScreen.style.display = "flex";
+  gameEndScreen.firstChild.textContent = message;
+  document
+    .querySelector(".game-end > button")
+    .addEventListener("click", (e) => {
+      gameEndScreen.style.display = "none";
+      modal.style.display = "none";
+      location.reload();
+    });
 }
 
 async function playTurn(turn, gameBoard) {
   // [ ] TODO
   const apiURL = "http://localhost:5235/move";
-  const response = await fetch(apiURL, {
+  await fetch(apiURL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(createRequestObject(turn, gameBoard)),
-  });
-  console.log(response);
+  })
+    .then((response) => response.json())
+    .then((data) => putMarkWithIndex(data.index, gameBoard, turn))
+    .catch((error) => {
+      console.log(error);
+      putMarkWithIndex(chooseRandomIndex(gameBoard), gameBoard, turn);
+    });
+  actionOnGameEnd(turn, gameBoard);
 }
 
 function createRequestObject(turn, gameBoard) {
@@ -181,6 +204,16 @@ function isWinner(mark, gameBoard) {
   return false;
 }
 
+function chooseRandomIndex(gameBoard) {
+  const emptyTileIndexes = [];
+  for (let i = 0; i < 9; i++) {
+    if (gameBoard.board[i] === "*") {
+      emptyTileIndexes.push(i);
+    }
+  }
+  return emptyTileIndexes[Math.round(Math.random() * emptyTileIndexes.length)];
+}
+
 function chooseGameMode() {
   return new Promise((resolve, reject) => {
     const chooseGameModeWindow = document.querySelector(
@@ -203,11 +236,15 @@ function chooseGameMode() {
 
 function choosePlayer() {
   return new Promise((resolve, reject) => {
-    document.querySelector(".modal > .choose-player").style.display = "flex";
+    const choosePlayerWindow = document.querySelector(
+      ".modal > .choose-player"
+    );
+    choosePlayerWindow.style.display = "flex";
     document
       .querySelectorAll(".modal > .choose-player > button")
       .forEach((button) =>
         button.addEventListener("click", (e) => {
+          choosePlayerWindow.style.display = "none";
           resolve(button.textContent);
         })
       );
